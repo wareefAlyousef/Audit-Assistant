@@ -110,7 +110,7 @@ def predict_fraud(df, model_path="catboost.joblib"):
     Returns both predictions and a fraud-only DataFrame.
     """
     # Load trained model
-    model = joblib.load(model_path)
+    model = joblib.load("catboost_model.joblib")
     
     # Make predictions
     preds = model.predict(df)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
     # File uploader widget
     # df = get_uploaded_file(widgets.FileUpload(accept='.csv,.xlsx,.parquet', multiple=False))
-    file_path = "data.csv"  
+    file_path = "fraud_only.xlsx"  
     df = read_excel_csv(file_path)
 
     if df is not None:
