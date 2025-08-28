@@ -1,143 +1,89 @@
+from flask import Flask, request, jsonify, send_file
 import pandas as pd
 import joblib
 from sklearn.preprocessing import LabelEncoder
-# from IPython.display import display 
-# import ipywidgets as widgets
+import os
 
-df = pd.DataFrame()
+app = Flask(__name__)
 
-# # Function to read uploaded file
-# def get_uploaded_file(uploader):
-#     if len(uploader.value) > 0:
-#         file_info = list(uploader.value.values())[0]
-#         content = file_info['content']
-#         filename = file_info['metadata']['name']
-
-#         # Handle different file types
-#         if filename.endswith('.csv'):
-#             df = pd.read_csv(pd.io.common.BytesIO(content))
-#         elif filename.endswith('.xlsx'):
-#             df = pd.read_excel(pd.io.common.BytesIO(content))
-#         elif filename.endswith('.parquet'):
-#             df = pd.read_parquet(pd.io.common.BytesIO(content))
-#         else:
-#             raise ValueError("Unsupported file type.")
-#         return df
-#     else:
-#         print("Please upload a file first.")
-#         return None empty
-
-
-def read_excel_csv(file_path):
-    """
-    Reads a CSV file exported from Excel and returns a pandas DataFrame.
-
-    Args:
-        file_path (str): Path to the CSV file.
-
-    Returns:
-        pd.DataFrame: DataFrame containing the CSV data.
-    """
-    try:
-        df = pd.read_csv(file_path)
-        return df
-    except Exception as e:
-        print(f"Error reading CSV file: {e}")
-        return None
-    
-def read_excel_xlsx(file_path):
-    """
-    Reads an Excel file (.xlsx) and returns a pandas DataFrame.
-
-    Args:
-        file_path (str): Path to the Excel file.
-
-    Returns:
-        pd.DataFrame: DataFrame containing the Excel data.
-    """
-    try:
-        df = pd.read_excel(file_path)
-        return df
-    except Exception as e:
-        print(f"Error reading Excel file: {e}")
-        return None
-
+# ---------- Functions ----------
 
 def normalize_iqr(df):
-    """
-    Normalize numeric columns of a DataFrame using median and IQR scaling.
-    
-    Formula:
-        if IQR == 0:
-            normalized = value - median
-        else:
-            normalized = (value - median) / IQR
-    """
     df_normalized = df.copy()
     numeric_cols = df.select_dtypes(include=['number']).columns
 
     for col in numeric_cols:
         median = df[col].median()
         iqr = df[col].quantile(0.75) - df[col].quantile(0.25)
-
         if iqr == 0:
             df_normalized[col] = df[col] - median
         else:
             df_normalized[col] = (df[col] - median) / iqr
-
-    return df_normalized 
-
+    return df_normalized
 
 def encode_categoricals(df):
-    """
-    Encode categorical (non-numeric) columns in the DataFrame using Label Encoding.
-    
-    Each categorical column is transformed into integer codes.
-    """
     df_encoded = df.copy()
     cat_cols = df.select_dtypes(exclude="number").columns
-
     for col in cat_cols:
         le = LabelEncoder()
         df_encoded[col] = le.fit_transform(df_encoded[col].astype(str))
-    
     return df_encoded
 
-
-def predict_fraud(df, model_path="catboost.joblib"):
-    """
-    Load a CatBoost model and predict fraud on the given DataFrame.
-    Returns both predictions and a fraud-only DataFrame.
-    """
-    # Load trained model
-    model = joblib.load("catboost_model.joblib")
-    
-    # Make predictions
+def predict_fraud(df, model_path="catboost_model.joblib"):
+    model = joblib.load(model_path)
     preds = model.predict(df)
-    
-    # Add predictions as a new column
-    df_with_preds = df.copy()
-    df_with_preds["predicted_fraud"] = preds
-    
-    # Fraud-only DataFrame (prediction == 1)
-    fraud_df = df_with_preds[df_with_preds["predicted_fraud"] == 1]
-    
-    return df_with_preds, fraud_df
+    return preds
+
+# ---------- Routes ----------
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    filename = file.filename
+
+    try:
+        # قراءة الملف
+        if filename.endswith(".csv"):
+            df_original = pd.read_csv(file)
+        elif filename.endswith(".xlsx"):
+            df_original = pd.read_excel(file)
+        else:
+            return jsonify({"error": "Unsupported file type"}), 400
+
+        # نسخة معالجة
+        df_normalized = normalize_iqr(df_original)
+        df_encoded = encode_categoricals(df_normalized)
+
+        # تنبؤ
+        preds = predict_fraud(df_encoded)
+
+        # رجع النتيجة للأصل
+        df_result = df_original.copy()
+        df_result["predicted_fraud"] = preds
+
+        # طباعة النتائج في التيرمنال
+        print("📊 كل البيانات:")
+        print(df_result.head(20))   # يعرض أول 20 صف
+        print("\n🚨 الصفوف الاحتيالية:")
+        print(df_result[df_result["predicted_fraud"] == 1])
+
+        # حفظ Excel مع تلوين الاحتيال
+        def highlight_fraud(row):
+            color = 'background-color: red' if row["predicted_fraud"] == 1 else ''
+            return [color] * len(row)
+
+        styled = df_result.style.apply(highlight_fraud, axis=1)
+        output_path = "predictions_highlighted.xlsx"
+        styled.to_excel(output_path, index=False, engine="openpyxl")
+
+        return send_file(output_path, as_attachment=True)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
-
-    # File uploader widget
-    # df = get_uploaded_file(widgets.FileUpload(accept='.csv,.xlsx,.parquet', multiple=False))
-    file_path = "fraud_only.xlsx"  
-    df = read_excel_csv(file_path)
-
-    if df is not None:
-        df_normalized = normalize_iqr(df)
-        df_encoded = encode_categoricals(df_normalized)
-        df_with_preds, fraud_df = predict_fraud(df_encoded)
-        
-        print("All Predictions:")
-        print(df_with_preds)
-        
-        print("\nFraud Predictions Only:")
-        print(fraud_df)
+    app.run(debug=True)
