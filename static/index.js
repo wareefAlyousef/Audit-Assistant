@@ -25,6 +25,9 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
     Object.values(row).forEach(val => {
       let td = document.createElement("td");
       td.textContent = val;
+       if(row.predicted_fraud == 1 || row.predicted_fraud == "Fraud"){
+          tr.style.backgroundColor = "#f28c8c"; // أحمر فاتح
+      }
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
