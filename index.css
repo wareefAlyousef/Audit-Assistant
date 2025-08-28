@@ -1,0 +1,86 @@
+ body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #d1ee9a;
+      color: #146933;
+    }
+    .page {
+      display: none;
+      padding: 45px;
+    }
+    .active {
+      display: block;
+    }
+    h1 {
+      font-size: 40px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    /* الصفحة الأولى */
+    .upload-box {
+      margin: 40px 0;
+    }
+    input[type="file"] {
+      padding: 10px;
+      border: 1px solid #f9f9f9;
+      background: #e5e4e4;
+      width: 250px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 25px;
+      background: #333;
+      color: #d1ee9a;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background: #4e9949;
+    }
+    /* الشاشات الثانية والثالثة */
+    .container {
+      display: flex;
+    }
+    .sidebar {
+      width: 180px;
+      background: #eee;
+      padding: 15px;
+    }
+    .sidebar button {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+      background: #f5f5f5;
+      color: #0f0f0f;
+      text-align: left;
+    }
+    .sidebar button.active {
+      background: #2ecc71;
+      color: white;
+      font-weight: bold;
+    }
+    .content {
+      flex: 1;
+      background: rgb(205, 179, 96);
+      padding: 20px;
+      margin-left: 10px;
+      border-radius: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
