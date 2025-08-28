@@ -3,16 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Fraud Detection</title>
- 
-    <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+<body>
   <!-- الصفحة الأولى -->
   <div class="page active" id="page1">
-    <h1>Fraud detection</h1>
+    <h1>Fraud Detection</h1>
    
     <div class="upload-box">
-      <input type="file">
-      <br>
-      <button onclick="goToPage(2)">detect</button>
+      <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <br>
+        <button type="submit">Detect</button>
+      </form>
     </div>
   </div>
 
@@ -20,27 +23,26 @@
   <div class="page" id="page2">
     <div class="container">
       <div class="sidebar">
-        <button class="active" onclick="goToPage(2)">dashboard</button>
-        <button onclick="goToPage(3)">statistic</button>
-        <button>the summary</button>
+        <button class="active" onclick="goToPage(2)">Dashboard</button>
+        <button onclick="goToPage(3)">Statistic</button>
+        <button onclick="goToPage(3)">Summary</button>
       </div>
       <div class="content">
         <h2>Transactions Table</h2>
-        <table>
-          <tr>
-            <th>step</th>
-            <th>type</th>
-            <th>amount</th>
-            <th>oldbalanceOrg</th>
-            <th>newbalanceOrig</th>
-            <th>isFraud</th>
-          </tr>
-          <tr>
-            <td>1</td><td>PAYMENT</td><td>983.5</td><td>5000</td><td>4016.5</td><td>0</td>
-          </tr>
-          <tr>
-            <td>2</td><td>TRANSFER</td><td>1200</td><td>3000</td><td>1800</td><td>1</td>
-          </tr>
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th>step</th>
+              <th>type</th>
+              <th>amount</th>
+              <th>oldbalanceOrg</th>
+              <th>newbalanceOrig</th>
+              <th>predicted_fraud</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rows will be injected by JS -->
+          </tbody>
         </table>
       </div>
     </div>
@@ -50,24 +52,19 @@
   <div class="page" id="page3">
     <div class="container">
       <div class="sidebar">
-        <button onclick="goToPage(2)">dashboard</button>
-        <button class="active" onclick="goToPage(3)">statistic</button>
-        <button>the summary</button>
+        <button onclick="goToPage(2)">Dashboard</button>
+        <button class="active" onclick="goToPage(3)">Statistic</button>
+        <button onclick="goToPage(3)">Summary</button>
       </div>
       <div class="content">
         <h2>Summary</h2>
-        <p>
+        <p id="summary">
           هنا تعرضين ملخص النتائج والإحصائيات الخاصة بالكشف عن الاحتيال.
         </p>
       </div>
     </div>
   </div>
 
-  <script>
-    function goToPage(num) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById('page' + num).classList.add('active');
-    }
-  </script>
+  <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>

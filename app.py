@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 import pandas as pd
 import joblib
 from sklearn.preprocessing import LabelEncoder
@@ -14,10 +14,7 @@ def normalize_iqr(df):
     for col in numeric_cols:
         median = df[col].median()
         iqr = df[col].quantile(0.75) - df[col].quantile(0.25)
-        if iqr == 0:
-            df_normalized[col] = df[col] - median
-        else:
-            df_normalized[col] = (df[col] - median) / iqr
+        df_normalized[col] = (df[col] - median) / iqr if iqr != 0 else df[col] - median
     return df_normalized
 
 def encode_categoricals(df):
@@ -34,49 +31,53 @@ def predict_fraud(df, model_path="catboost_model.joblib"):
     return preds
 
 # ---------- Routes ----------
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-    if request.method == "POST":
-        file = request.files["file"]
-        if file:
-            file_path = "uploaded_file.xlsx"
-            file.save(file_path)
-
-            # قراءة الملف
-            if file.filename.endswith(".csv"):
-                df_original = pd.read_csv(file_path)
-            else:
-                df_original = pd.read_excel(file_path)
-
-            # نسخة للمعالجة
-            df_normalized = normalize_iqr(df_original)
-            df_encoded = encode_categoricals(df_normalized)
-
-            # تنبؤ
-            preds = predict_fraud(df_encoded)
-
-            # ربط مع الأصل
-            df_result = df_original.copy()
-            df_result["predicted_fraud"] = preds
-
-            # طباعة في التيرمنال
-            print("📊 البيانات كاملة:")
-            print(df_result.head())
-            print("\n🚨 السجلات الاحتيالية:")
-            print(df_result[df_result["predicted_fraud"] == 1])
-
-            # حفظ مع تلوين الاحتيال
-            def highlight_fraud(row):
-                color = 'background-color: red' if row["predicted_fraud"] == 1 else ''
-                return [color] * len(row)
-
-            styled = df_result.style.apply(highlight_fraud, axis=1)
-            output_file = "predictions_highlighted.xlsx"
-            styled.to_excel(output_file, index=False, engine="openpyxl")
-
-            return send_file(output_file, as_attachment=True)
-
     return render_template("index.html")
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "Empty filename"}), 400
+
+    # Save to temporary uploads folder
+    os.makedirs("uploads", exist_ok=True)
+    file_path = os.path.join("uploads", file.filename)
+    file.save(file_path)
+
+    # Read file safely
+    if file.filename.endswith(".csv"):
+        df_original = pd.read_csv(file_path)
+    elif file.filename.endswith(".xlsx"):
+        df_original = pd.read_excel(file_path)
+    else:
+        return jsonify({"error": "Unsupported file type"}), 400
+
+    # Process
+    df_normalized = normalize_iqr(df_original)
+    df_encoded = encode_categoricals(df_normalized)
+    preds = predict_fraud(df_encoded)
+
+    df_result = df_original.copy()
+    df_result["predicted_fraud"] = preds
+
+    # Prepare JSON for frontend
+    expected_cols = ["step", "type", "amount", "oldbalanceOrg", "newbalanceOrig", "predicted_fraud"]
+    available_cols = [c for c in expected_cols if c in df_result.columns]
+
+    data = df_result[available_cols].head(50).to_dict(orient="records")
+    fraud_count = int((df_result["predicted_fraud"] == 1).sum())
+    total_count = int(len(df_result))
+
+    return jsonify({
+        "data": data,
+        "fraud_count": fraud_count,
+        "total_count": total_count
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
