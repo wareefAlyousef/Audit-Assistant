@@ -1,17 +1,48 @@
 import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
+import joblib
+from sklearn.preprocessing import LabelEncoder
 
-df = pd.read_csv(
-    'Bank_Transaction_Fraud_Detection.csv',
-    parse_dates = ['Transaction_Date'],    # Converting 'Transaction_Date' to datetime
-    dayfirst = True     # Ensuring the date is parsed as dd-mm-yyyy
-)
-df['Transaction_Time'] = pd.to_timedelta(df['Transaction_Time'])
+# مسار الملف
+file_path = "transactions_data100.csv"  # غيّريه حسب الملف عندك
 
-# Checking number of rows and columns in the dataset
-print(df.shape)
+# قراءة الملف مباشرة
+df = pd.read_csv(file_path)
+print("✅ الملف قُرأ بنجاح. الأعمدة:")
+print(df.columns.tolist())
 
-# Viweing the datatype of each column along with number of null values in the dataset
-print(df.info())
+# اختيار الأعمدة اللي يحتاجها النموذج
+feature_cols = ['step', 'type', 'amount', 'oldbalanceOrg', 'newbalanceOrig',
+                'oldbalanceDest', 'newbalanceDest']
+
+# فصل الـ features والـ target
+X = df[feature_cols]
+y = df['isFraud']  # ممكن تستخدمها لو حاب تتأكد من صحة النموذج
+
+# تحويل الأعمدة الفئوية (categorical) إلى أرقام
+X_encoded = X.copy()
+le = LabelEncoder()
+X_encoded['type'] = le.fit_transform(X_encoded['type'])
+
+# تحميل نموذج CatBoost
+model = joblib.load("catboost_model.joblib")  # تأكدي اسم الملف عندك
+
+# التنبؤ
+preds = model.predict(X_encoded)
+
+# إضافة التنبؤات للـ DataFrame
+df['predicted_fraud'] = preds
+
+# تصفية التنبؤات الاحتيالية فقط
+fraud_df = df[df['predicted_fraud'] == 1]
+
+# طباعة النتائج
+print("\n✅ كل التنبؤات:")
+print(df.head())
+
+print("\n✅ التنبؤات الاحتيالية فقط:")
+print(fraud_df.head())
+
+# حفظ النتائج في ملف Excel إذا حبيت
+df.to_excel("predictions.xlsx", index=False)
+fraud_df.to_excel("fraud_only.xlsx", index=False)
+print("\n✅ تم حفظ النتائج في predictions.xlsx و fraud_only.xlsx")
