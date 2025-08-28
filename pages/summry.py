@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file (if present)
 load_dotenv()
 
-# Initialize client
+# Initialize client hi
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def call_gpt4(prompt: str) -> str:

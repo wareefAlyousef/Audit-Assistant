@@ -25,7 +25,7 @@ df = pd.DataFrame()
 #         return df
 #     else:
 #         print("Please upload a file first.")
-#         return None
+#         return None empty
 
 
 def read_excel_csv(file_path):
