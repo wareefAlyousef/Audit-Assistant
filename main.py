@@ -34,6 +34,7 @@ def predict_fraud(df, model_path="catboost_model.joblib"):
     preds = model.predict(df)
     return preds
 
+
 # ---------- Routes ----------
 
 @app.route("/predict", methods=["POST"])
