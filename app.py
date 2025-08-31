@@ -30,6 +30,73 @@ def predict_fraud(df, model_path="catboost_model.joblib"):
     preds = model.predict(df)
     return preds
 
+# ---------- Statistics ----------
+def get_numeric_statistics(df):
+    stats = {}
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    for col in numeric_cols:
+        stats[col] = {
+            "mean": df[col].mean(),
+            "median": df[col].median(),
+            "std": df[col].std(),
+            "min": df[col].min(),
+            "max": df[col].max(),
+            "missing": int(df[col].isna().sum())
+        }
+    return stats
+
+def get_categorical_statistics(df):
+    cat_stats = {}
+    cat_cols = df.select_dtypes(exclude=['number']).columns
+    for col in cat_cols:
+        counts = df[col].value_counts()
+        percentages = df[col].value_counts(normalize=True) * 100
+        cat_stats[col] = [
+            {"value": val, "count": int(counts[val]), "percentage": round(percentages[val], 2)}
+            for val in counts.index
+        ]
+    return cat_stats
+
+# ---------- Routes ----------
+@app.route("/")
+def index():
+    return "Flask Statistics API is running ✅"
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "Empty filename"}), 400
+
+    # Save file temporarily
+    os.makedirs("uploads", exist_ok=True)
+    file_path = os.path.join("uploads", file.filename)
+    file.save(file_path)
+
+    # Read file
+    if file.filename.endswith(".csv"):
+        df = pd.read_csv(file_path)
+    elif file.filename.endswith(".xlsx"):
+        df = pd.read_excel(file_path)
+    else:
+        return jsonify({"error": "Unsupported file type"}), 400
+
+    # Generate statistics
+    numeric_stats = get_numeric_statistics(df)
+    categorical_stats = get_categorical_statistics(df)
+
+    return jsonify({ 
+        "numeric_statistics": numeric_stats,
+        "categorical_statistics": categorical_stats
+    })
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
 # ---------- Routes ----------
 @app.route("/")
 def index():

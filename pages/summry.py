@@ -25,5 +25,5 @@ def process_dataframe(df: pd.DataFrame):
     print(summary)
 
 if __name__ == "__main__":
-    df1 = pd.read_csv("3are1.csv")
+    df1 = pd.read_csv("../data/3are1.csv")
     process_dataframe(df1)
