@@ -17,12 +17,7 @@ CORS(app)
 MODEL_PATH = "catboost_model.joblib"
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
-
-# These are the columns your model was originally trained with
-MODEL_REQUIRED_COLUMNS = ["step", "type", "amount", "nameOrig", "oldbalanceOrg", "newbalanceOrig", "nameDest", "newbalanceDest", "isFlaggedFraud"]
-
-# These are the columns we'll ask users to provide (minimum required)
-USER_REQUIRED_COLUMNS = ["step", "type", "amount", "oldbalanceOrg", "newbalanceOrig"]
+REQUIRED_COLUMNS = ["step", "type", "amount", "oldbalanceOrg", "newbalanceOrig"]
 
 # Create upload directory if it doesn't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -37,8 +32,8 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def validate_dataframe(df):
-    """Check if dataframe has required columns from user"""
-    missing_cols = [col for col in USER_REQUIRED_COLUMNS if col not in df.columns]
+    """Check if dataframe has required columns"""
+    missing_cols = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
     
@@ -57,37 +52,6 @@ def validate_dataframe(df):
                 raise ValueError(f"Column '{col}' contains too many non-numeric values")
     
     return True
-
-def prepare_for_prediction(df):
-    """
-    Prepare the user's dataframe to match the model's expected input format.
-    This adds missing columns with default values that the model expects.
-    """
-    df_prepared = df.copy()
-    
-    # Add missing columns that the model expects
-    for col in MODEL_REQUIRED_COLUMNS:
-        if col not in df_prepared.columns:
-            if col == "nameOrig":
-                # Generate synthetic nameOrig values
-                df_prepared[col] = [f"C{1000000 + i}" for i in range(len(df_prepared))]
-            elif col == "nameDest":
-                # Generate synthetic nameDest values
-                df_prepared[col] = [f"C{2000000 + i}" for i in range(len(df_prepared))]
-            elif col == "newbalanceDest":
-                # Set default value for newbalanceDest
-                df_prepared[col] = 0.0
-            elif col == "isFlaggedFraud":
-                # Set default value for isFlaggedFraud
-                df_prepared[col] = 0
-            else:
-                # For other missing columns, fill with 0
-                df_prepared[col] = 0
-    
-    # Ensure the columns are in the exact order the model expects
-    df_prepared = df_prepared[MODEL_REQUIRED_COLUMNS]
-    
-    return df_prepared
 
 def normalize_iqr(df):
     df_normalized = df.copy()
@@ -217,17 +181,17 @@ def upload():
         # Validate the dataframe
         validate_dataframe(df_original)
         
-        # Prepare data for the model (add missing columns)
-        df_for_model = prepare_for_prediction(df_original)
-        
         # Process data
-        df_normalized = normalize_iqr(df_for_model)
+        df_normalized = normalize_iqr(df_original)
         df_encoded = encode_categoricals(df_normalized)
         
+        # Select only the required columns for prediction
+        df_for_prediction = df_encoded[REQUIRED_COLUMNS].copy()
+        
         # Make predictions
-        preds, probas = predict_fraud(df_encoded)
+        preds, probas = predict_fraud(df_for_prediction)
 
-        # Prepare results - only show user-provided columns plus predictions
+        # Prepare results
         df_result = df_original.copy()
         df_result["predicted_fraud"] = preds
         df_result["fraud_probability"] = [round(prob[1] * 100, 2) for prob in probas]  # Probability of fraud class
@@ -235,8 +199,8 @@ def upload():
         # Generate analytics
         analytics = generate_analytics(df_result)
 
-        # Prepare JSON for frontend - only show user-relevant columns
-        expected_cols = USER_REQUIRED_COLUMNS + ["predicted_fraud", "fraud_probability"]
+        # Prepare JSON for frontend
+        expected_cols = REQUIRED_COLUMNS + ["predicted_fraud", "fraud_probability"]
         available_cols = [c for c in expected_cols if c in df_result.columns]
 
         # Convert to list of dictionaries for JSON response
@@ -321,29 +285,42 @@ def health_check():
         "model_path": MODEL_PATH
     })
 
-@app.route("/model/features")
-def model_features():
-    """Endpoint to check what features the model expects"""
+@app.route("/api/analyze", methods=["POST"])
+def analyze_transaction():
+    """API endpoint for analyzing a single transaction"""
     try:
-        if not os.path.exists(MODEL_PATH):
-            return jsonify({"error": "Model file not found"}), 404
-            
-        model = joblib.load(MODEL_PATH)
-        # Try to get feature names from the model
-        try:
-            features = model.feature_names_
-            return jsonify({
-                "features": list(features),
-                "feature_count": len(features)
-            })
-        except:
-            return jsonify({
-                "message": "Could not extract feature names from model",
-                "expected_features": MODEL_REQUIRED_COLUMNS
-            })
-            
+        transaction_data = request.get_json()
+        if not transaction_data:
+            return jsonify({"error": "No transaction data provided"}), 400
+        
+        # Convert to DataFrame
+        df = pd.DataFrame([transaction_data])
+        
+        # Validate
+        validate_dataframe(df)
+        
+        # Process data
+        df_normalized = normalize_iqr(df)
+        df_encoded = encode_categoricals(df_normalized)
+        
+        # Select only the required columns for prediction
+        df_for_prediction = df_encoded[REQUIRED_COLUMNS].copy()
+        
+        # Make prediction
+        pred, proba = predict_fraud(df_for_prediction)
+        
+        return jsonify({
+            "success": True,
+            "prediction": int(pred[0]),
+            "fraud_probability": round(proba[0][1] * 100, 2),
+            "is_fraud": bool(pred[0] == 1)
+        })
+        
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        app.logger.error(f"Error analyzing transaction: {str(e)}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 if __name__ == "__main__":
     # Check if model exists before starting
