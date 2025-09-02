@@ -1,71 +1,908 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Fraud Detection</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FraudGuard - Transaction Monitoring System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo i {
+            margin-right: 10px;
+            color: #ff9f43;
+        }
+
+        .tagline {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        .app-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #34495e;
+            color: white;
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .nav-item:hover {
+            background: #2c3e50;
+        }
+
+        .nav-item.active {
+            background: #2c3e50;
+            border-left: 4px solid #ff9f43;
+        }
+
+        .nav-item i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .upload-area {
+            border: 3px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f8f9fa;
+            transition: background 0.3s;
+        }
+
+        .upload-area:hover {
+            background: #e8f4fc;
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+            display: inline-block;
+            margin-top: 15px;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+        }
+
+        .btn-success:hover {
+            background: #27ae60;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #e6f3ff;
+        }
+
+        .fraud-row {
+            background-color: #ffcccc !important;
+        }
+
+        .fraud-row:hover {
+            background-color: #ffb3b3 !important;
+        }
+
+        .stats-container {
+            display: flex;
+            justify-content: space-between;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .fraud-stat {
+            color: #e74c3c;
+        }
+
+        .legit-stat {
+            color: #2ecc71;
+        }
+
+        .total-stat {
+            color: #3498db;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 5px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .file-info {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .file-size {
+            color: #7f8c8d;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #ecf0f1;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .loader {
+            display: none;
+            border: 5px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 5px solid #3498db;
+            width: 50px;
+            height: 50px;
+            margin: 20px auto;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .alert-error {
+            background-color: #ffdddd;
+            border-left: 5px solid #e74c3c;
+            color: #e74c3c;
+        }
+
+        .alert-success {
+            background-color: #ddffdd;
+            border-left: 5px solid #2ecc71;
+            color: #2ecc71;
+        }
+
+        @media (max-width: 768px) {
+            .app-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+            
+            .stats-container {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
-  <!-- الصفحة الأولى -->
-  <div class="page active" id="page1">
-    <h1>Fraud Detection</h1>
-   
-    <div class="upload-box">
-      <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" name="file" required>
-        <br>
-        <button type="submit">Detect</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- الصفحة الثانية (Dashboard) -->
-  <div class="page" id="page2">
     <div class="container">
-      <div class="sidebar">
-        <button class="active" onclick="goToPage(2)">Dashboard</button>
-        <button onclick="goToPage(3)">Statistic</button>
-        <button onclick="goToPage(3)">Summary</button>
-      </div>
-      <div class="content">
-        <h2>Transactions Table</h2>
-        <table id="resultsTable">
-          <thead>
-            <tr>
-              <th>step</th>
-              <th>type</th>
-              <th>amount</th>
-              <th>oldbalanceOrg</th>
-              <th>newbalanceOrig</th>
-              <th>predicted_fraud</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Rows will be injected by JS -->
-          </tbody>
-        </table>
-      </div>
+        <header>
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <span>FraudGuard</span>
+            </div>
+            <div class="tagline">Advanced Transaction Monitoring System</div>
+        </header>
+        
+        <div class="app-content">
+            <div class="sidebar">
+                <div class="nav-item active" onclick="showPage('upload')">
+                    <i class="fas fa-file-upload"></i>
+                    <span>Upload Data</span>
+                </div>
+                <div class="nav-item" onclick="showPage('results')">
+                    <i class="fas fa-table"></i>
+                    <span>Transaction Results</span>
+                </div>
+                <div class="nav-item" onclick="showPage('analytics')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Analytics</span>
+                </div>
+            </div>
+            
+            <div class="main-content">
+                <!-- Upload Page -->
+                <div id="upload" class="page active">
+                    <h2>Upload Transaction Data</h2>
+                    <p>Upload a CSV or Excel file containing transaction data for fraud analysis.</p>
+                    
+                    <div class="alert alert-error" id="errorAlert"></div>
+                    <div class="alert alert-success" id="successAlert"></div>
+                    
+                    <div class="upload-area" id="dropZone">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h3>Drag & Drop Your File Here</h3>
+                        <p>Supported formats: .csv, .xlsx</p>
+                        <p>or</p>
+                        <label for="fileInput" class="btn">Select File</label>
+                        <input type="file" id="fileInput" accept=".csv,.xlsx" style="display: none;">
+                    </div>
+                    
+                    <div class="file-info" id="fileInfo" style="display: none;">
+                        <div>
+                            <span class="file-name" id="fileName">No file selected</span>
+                            <span class="file-size" id="fileSize"></span>
+                        </div>
+                        <button class="btn btn-success" onclick="processFile()">
+                            <i class="fas fa-play"></i> Process File
+                        </button>
+                    </div>
+                    
+                    <div class="loader" id="loader"></div>
+                    
+                    <div style="margin-top: 30px;">
+                        <h3>Expected File Format</h3>
+                        <p>Your file should include the following columns:</p>
+                        <ul style="margin: 10px 0 10px 20px;">
+                            <li>step</li>
+                            <li>type</li>
+                            <li>amount</li>
+                            <li>oldbalanceOrg</li>
+                            <li>newbalanceOrig</li>
+                        </ul>
+                        <p>Additional columns will be ignored.</p>
+                    </div>
+                </div>
+                
+                <!-- Results Page -->
+                <div id="results" class="page">
+                    <h2>Transaction Results</h2>
+                    <p>Analysis results for the uploaded transaction data.</p>
+                    
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Transactions</div>
+                            <div class="stat-value total-stat" id="totalTransactions">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Fraudulent</div>
+                            <div class="stat-value fraud-stat" id="fraudTransactions">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Legitimate</div>
+                            <div class="stat-value legit-stat" id="legitTransactions">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Fraud Rate</div>
+                            <div class="stat-value fraud-stat" id="fraudRate">0%</div>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow-x: auto;">
+                        <table id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th>Step</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Old Balance</th>
+                                    <th>New Balance</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" style="text-align: center;">No data available. Please upload a file.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="btn" onclick="downloadResults()">
+                            <i class="fas fa-download"></i> Download Results
+                        </button>
+                        <button class="btn btn-danger" onclick="showPage('upload')">
+                            <i class="fas fa-redo"></i> Analyze Another File
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Analytics Page -->
+                <div id="analytics" class="page">
+                    <h2>Fraud Analytics</h2>
+                    <p>Visual representation of fraud patterns in your transaction data.</p>
+                    
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <div class="stat-label">Highest Fraud Amount</div>
+                            <div class="stat-value fraud-stat" id="highestFraud">$0.00</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Most Common Fraud Type</div>
+                            <div class="stat-value fraud-stat" id="commonType">N/A</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Fraud Distribution by Transaction Type</h3>
+                        <canvas id="typeChart" height="300"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Fraud Over Time</h3>
+                        <canvas id="timeChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>FraudGuard &copy; 2023 | Advanced Fraud Detection System</p>
+            <p>Connected to Flask Backend API</p>
+        </footer>
     </div>
-  </div>
 
-  <!-- الصفحة الثالثة (Summary) -->
-  <div class="page" id="page3">
-    <div class="container">
-      <div class="sidebar">
-        <button onclick="goToPage(2)">Dashboard</button>
-        <button class="active" onclick="goToPage(3)">Statistic</button>
-        <button onclick="goToPage(3)">Summary</button>
-      </div>
-      <div class="content">
-        <h2>Summary</h2>
-        <p id="summary">
-          هنا تعرضين ملخص النتائج والإحصائيات الخاصة بالكشف عن الاحتيال.
-        </p>
-      </div>
-    </div>
-  </div>
+    <script>
+        // Global variables
+        let currentData = null;
+        let typeChart = null;
+        let timeChart = null;
 
-  <script src="{{ url_for('static', filename='index.js') }}"></script>
+        // Page navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Find the navigation item that corresponds to this page and activate it
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (item.textContent.includes(
+                    pageId.charAt(0).toUpperCase() + pageId.slice(1)
+                )) {
+                    item.classList.add('active');
+                }
+            });
 
+            // If showing analytics and we have data, render charts
+            if (pageId === 'analytics' && currentData) {
+                renderCharts();
+            }
+        }
+        
+        // File input handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            handleFileSelection(this.files[0]);
+        });
+        
+        // Drag and drop functionality
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.background = '#e8f4fc';
+        });
+        
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.style.background = '#f8f9fa';
+        });
+        
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.background = '#f8f9fa';
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+        
+        // Handle file selection
+        function handleFileSelection(file) {
+            if (file) {
+                const fileSize = file.size < 1024 * 1024 ? 
+                    (file.size / 1024).toFixed(2) + ' KB' : 
+                    (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+                
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = ' (' + fileSize + ')';
+                document.getElementById('fileInfo').style.display = 'flex';
+                
+                // Set the file input for consistency
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                document.getElementById('fileInput').files = dataTransfer.files;
+                
+                // Hide any previous alerts
+                hideAlerts();
+            }
+        }
+        
+        // Clicking on upload area triggers file input
+        dropZone.addEventListener('click', function() {
+            document.getElementById('fileInput').click();
+        });
+        
+        // Process the uploaded file
+        function processFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files.length) {
+                showError('Please select a file first');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show loading state
+            const processBtn = document.querySelector('.btn-success');
+            const originalText = processBtn.innerHTML;
+            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            processBtn.disabled = true;
+            document.getElementById('loader').style.display = 'block';
+            hideAlerts();
+            
+            // Send to backend
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                currentData = data;
+                displayResults(data);
+                showSuccess('File processed successfully!');
+                showPage('results');
+            })
+            .catch(error => {
+                showError('Error: ' + error.message);
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                // Reset button
+                processBtn.innerHTML = '<i class="fas fa-play"></i> Process File';
+                processBtn.disabled = false;
+                document.getElementById('loader').style.display = 'none';
+            });
+        }
+        
+        // Display results from backend
+        function displayResults(data) {
+            // Update statistics
+            document.getElementById('totalTransactions').textContent = data.total_count;
+            document.getElementById('fraudTransactions').textContent = data.fraud_count;
+            document.getElementById('legitTransactions').textContent = data.total_count - data.fraud_count;
+            document.getElementById('fraudRate').textContent = 
+                ((data.fraud_count / data.total_count) * 100).toFixed(2) + '%';
+            
+            // Update results table
+            const tableBody = document.querySelector('#resultsTable tbody');
+            tableBody.innerHTML = '';
+            
+            if (data.data && data.data.length > 0) {
+                data.data.forEach(transaction => {
+                    const row = document.createElement('tr');
+                    if (transaction.predicted_fraud === 1) {
+                        row.classList.add('fraud-row');
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${transaction.step || 'N/A'}</td>
+                        <td>${transaction.type || 'N/A'}</td>
+                        <td>${transaction.amount ? '$' + parseFloat(transaction.amount).toLocaleString() : 'N/A'}</td>
+                        <td>${transaction.oldbalanceOrg ? '$' + parseFloat(transaction.oldbalanceOrg).toLocaleString() : 'N/A'}</td>
+                        <td>${transaction.newbalanceOrig ? '$' + parseFloat(transaction.newbalanceOrig).toLocaleString() : 'N/A'}</td>
+                        <td>${transaction.predicted_fraud === 1 ? 
+                            '<span style="color: #e74c3c;"><i class="fas fa-exclamation-circle"></i> Fraud</span>' : 
+                            '<span style="color: #27ae60;"><i class="fas fa-check-circle"></i> Legitimate</span>'}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // If there are more transactions, add a message
+                if (data.total_count > 50) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td colspan="6" style="text-align: center;">
+                            Showing 50 of ${data.total_count} transactions
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+                
+                // Update analytics data
+                updateAnalytics(data);
+            } else {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center;">No data available in the uploaded file.</td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Update analytics page with data
+        function updateAnalytics(data) {
+            if (!data.data) return;
+            
+            // Calculate highest fraud amount
+            let highestFraud = 0;
+            let commonType = {};
+            
+            data.data.forEach(t => {
+                if (t.predicted_fraud === 1) {
+                    // Check for highest fraud amount
+                    if (t.amount && parseFloat(t.amount) > highestFraud) {
+                        highestFraud = parseFloat(t.amount);
+                    }
+                    
+                    // Count fraud by type
+                    if (t.type) {
+                        commonType[t.type] = (commonType[t.type] || 0) + 1;
+                    }
+                }
+            });
+            
+            // Update highest fraud amount
+            document.getElementById('highestFraud').textContent = '$' + highestFraud.toLocaleString();
+            
+            // Find most common fraud type
+            let mostCommonType = 'N/A';
+            let maxCount = 0;
+            for (const type in commonType) {
+                if (commonType[type] > maxCount) {
+                    mostCommonType = type;
+                    maxCount = commonType[type];
+                }
+            }
+            document.getElementById('commonType').textContent = mostCommonType;
+            
+            // Render charts if we're on the analytics page
+            if (document.getElementById('analytics').classList.contains('active')) {
+                renderCharts();
+            }
+        }
+        
+        // Render analytics charts
+        function renderCharts() {
+            if (!currentData || !currentData.data) return;
+            
+            // Process data for charts
+            const fraudByType = {};
+            const fraudOverTime = {};
+            
+            currentData.data.forEach(t => {
+                if (t.predicted_fraud === 1) {
+                    // Count by type
+                    if (t.type) {
+                        fraudByType[t.type] = (fraudByType[t.type] || 0) + 1;
+                    }
+                    
+                    // Count by time (step)
+                    if (t.step) {
+                        fraudOverTime[t.step] = (fraudOverTime[t.step] || 0) + 1;
+                    }
+                }
+            });
+            
+            // Destroy existing charts if they exist
+            if (typeChart) {
+                typeChart.destroy();
+            }
+            if (timeChart) {
+                timeChart.destroy();
+            }
+            
+            // Create fraud by type chart
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            typeChart = new Chart(typeCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(fraudByType),
+                    datasets: [{
+                        data: Object.values(fraudByType),
+                        backgroundColor: [
+                            '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+                            '#1abc9c', '#d35400', '#c0392b', '#16a085', '#27ae60'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Fraud Distribution by Transaction Type'
+                        },
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+            
+            // Create fraud over time chart
+            const timeCtx = document.getElementById('timeChart').getContext('2d');
+            
+            // Sort time data
+            const sortedTimeKeys = Object.keys(fraudOverTime).sort((a, b) => a - b);
+            const sortedTimeValues = sortedTimeKeys.map(key => fraudOverTime[key]);
+            
+            timeChart = new Chart(timeCtx, {
+                type: 'line',
+                data: {
+                    labels: sortedTimeKeys,
+                    datasets: [{
+                        label: 'Fraudulent Transactions',
+                        data: sortedTimeValues,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Fraud Over Time'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time Step'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Fraudulent Transactions'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Download results
+        function downloadResults() {
+            if (!currentData) {
+                showError('No data available to download');
+                return;
+            }
+            
+            // Convert data to CSV
+            let csvContent = "Step,Type,Amount,Old Balance,New Balance,Status\n";
+            
+            currentData.data.forEach(t => {
+                const status = t.predicted_fraud === 1 ? "Fraud" : "Legitimate";
+                csvContent += `${t.step || ''},${t.type || ''},${t.amount || ''},${t.oldbalanceOrg || ''},${t.newbalanceOrig || ''},${status}\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const date = new Date().toISOString().slice(0, 10);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `fraud_detection_results_${date}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Show error message
+        function showError(message) {
+            const alert = document.getElementById('errorAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            const alert = document.getElementById('successAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Hide all alerts
+        function hideAlerts() {
+            document.getElementById('errorAlert').style.display = 'none';
+            document.getElementById('successAlert').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

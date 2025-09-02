@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fraud Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='summary.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <button onclick="goToPage(1)">Dashboard</button>
+            <button onclick="goToPage(2)">Statistic</button>
+            <button class="active" onclick="goToPage(3)">Summary</button>
+        </div>
+        <div class="content">
+            <h2>Summary</h2>
+            <p id="summary">
+                <!-- Summary content will be injected here -->
+            </p>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='summary.js') }}"></script>
+</body>
+</html>
