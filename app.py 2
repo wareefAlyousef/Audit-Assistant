@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FraudGuard - Transaction Monitoring System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo i {
+            margin-right: 10px;
+            color: #ff9f43;
+        }
+
+        .tagline {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        .app-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #34495e;
+            color: white;
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .nav-item:hover {
+            background: #2c3e50;
+        }
+
+        .nav-item.active {
+            background: #2c3e50;
+            border-left: 4px solid #ff9f43;
+        }
+
+        .nav-item i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .upload-area {
+            border: 3px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f8f9fa;
+            transition: background 0.3s;
+        }
+
+        .upload-area:hover {
+            background: #e8f4fc;
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+            display: inline-block;
+            margin-top: 15px;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+        }
+
+        .btn-success:hover {
+            background: #27ae60;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #e6f3ff;
+        }
+
+        .fraud-row {
+            background-color: #ffcccc !important;
+        }
+
+        .fraud-row:hover {
+            background-color: #ffb3b3 !important;
+        }
+
+        .stats-container {
+            display: flex;
+            justify-content: space-between;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .fraud-stat {
+            color: #e74c3c;
+        }
+
+        .legit-stat {
+            color: #2ecc71;
+        }
+
+        .total-stat {
+            color: #3498db;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 5px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .file-info {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .file-size {
+            color: #7f8c8d;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #ecf0f1;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .loader {
+            display: none;
+            border: 5px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 5px solid #3498db;
+            width: 50px;
+            height: 50px;
+            margin: 20px auto;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .alert-error {
+            background-color: #ffdddd;
+            border-left: 5px solid #e74c3c;
+            color: #e74c3c;
+        }
+
+        .alert-success {
+            background-color: #ddffdd;
+            border-left: 5px solid #2ecc71;
+            color: #2ecc71;
+        }
+
+        @media (max-width: 768px) {
+            .app-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+            
+            .stats-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <span>FraudGuard</span>
+            </div>
+            <div class="tagline">Advanced Transaction Monitoring System</div>
+        </header>
+        
+        <div class="app-content">
+            <div class="sidebar">
+                <div class="nav-item active" onclick="showPage('upload')">
+                    <i class="fas fa-file-upload"></i>
+                    <span>Upload Data</span>
+                </div>
+                <div class="nav-item" onclick="showPage('results')">
+                    <i class="fas fa-table"></i>
+                    <span>Transaction Results</span>
+                </div>
+                <div class="nav-item" onclick="showPage('analytics')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Analytics</span>
+                </div>
+            </div>
+            
+            <div class="main-content">
+                <!-- Upload Page -->
+                <div id="upload" class="page active">
+                    <h2>Upload Transaction Data</h2>
+                    <p>Upload a CSV or Excel file containing transaction data for fraud analysis.</p>
+                    
+                    <div class="alert alert-error" id="errorAlert"></div>
+                    <div class="alert alert-success" id="successAlert"></div>
+                    
+                    <div class="upload-area" id="dropZone">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h3>Drag & Drop Your File Here</h3>
+                        <p>Supported formats: .csv, .xlsx</p>
+                        <p>or</p>
+                        <label for="fileInput" class="btn">Select File</label>
+                        <input type="file" id="fileInput" accept=".csv,.xlsx" style="display: none;">
+                    </div>
+                    
+                    <div class="file-info" id="fileInfo" style="display: none;">
+                        <div>
+                            <span class="file-name" id="fileName">No file selected</span>
+                            <span class="file-size" id="fileSize"></span>
+                        </div>
+                        <button class="btn btn-success" onclick="processFile()">
+                            <i class="fas fa-play"></i> Process File
+                        </button>
+                    </div>
+                    
+                    <div class="loader" id="loader"></div>
+                    
+                    <div style="margin-top: 30px;">
+                        <h3>Expected File Format</h3>
+                        <p>Your file should include the following columns:</p>
+                        <ul style="margin: 10px 0 10px 20px;">
+                            <li>step</li>
+                            <li>type</li>
+                            <li>amount</li>
+                            <li>oldbalanceOrg</li>
+                            <li>newbalanceOrig</li>
+                        </ul>
+                        <p>Additional columns will be ignored.</p>
+                    </div>
+                </div>
+                
+                <!-- Results Page -->
+                <div id="results" class="page">
+                    <h2>Transaction Results</h2>
+                    <p>Analysis results for the uploaded transaction data.</p>
+                    
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Transactions</div>
+                            <div class="stat-value total-stat" id="totalTransactions">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Fraudulent</div>
+                            <div class="stat-value fraud-stat" id="fraudTransactions">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Legitimate</div>
+                            <div class="stat-value legit-stat" id="legitTransactions">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Fraud Rate</div>
+                            <div class="stat-value fraud-stat" id="fraudRate">0%</div>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow-x: auto;">
+                        <table id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th>Step</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Old Balance</th>
+                                    <th>New Balance</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" style="text-align: center;">No data available. Please upload a file.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="btn" onclick="downloadResults()">
+                            <i class="fas fa-download"></i> Download Results
+                        </button>
+                        <button class="btn btn-danger" onclick="showPage('upload')">
+                            <i class="fas fa-redo"></i> Analyze Another File
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Analytics Page -->
+                <div id="analytics" class="page">
+                    <h2>Fraud Analytics</h2>
+                    <p>Visual representation of fraud patterns in your transaction data.</p>
+                    
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <div class="stat-label">Highest Fraud Amount</div>
+                            <div class="stat-value fraud-stat" id="highestFraud">$0.00</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Most Common Fraud Type</div>
+                            <div class="stat-value fraud-stat" id="commonType">N/A</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Fraud Distribution by Transaction Type</h3>
+                        <canvas id="typeChart" height="300"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Fraud Over Time</h3>
+                        <canvas id="timeChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>FraudGuard &copy; 2023 | Advanced Fraud Detection System</p>
+            <p>Connected to Flask Backend API</p>
+        </footer>
+    </div>
+
+    <script>
+        // Global variables
+        let currentData = null;
+        let typeChart = null;
+        let timeChart = null;
+
+        // Page navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Find the navigation item that corresponds to this page and activate it
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (item.textContent.includes(
+                    pageId.charAt(0).toUpperCase() + pageId.slice(1)
+                )) {
+                    item.classList.add('active');
+                }
+            });
+
+            // If showing analytics and we have data, render charts
+            if (pageId === 'analytics' && currentData) {
+                renderCharts();
+            }
+        }
+        
+        // File input handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            handleFileSelection(this.files[0]);
+        });
+        
+        // Drag and drop functionality
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.background = '#e8f4fc';
+        });
+        
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.style.background = '#f8f9fa';
+        });
+        
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.background = '#f8f9fa';
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+        
+        // Handle file selection
+        function handleFileSelection(file) {
+            if (file) {
+                const fileSize = file.size < 1024 * 1024 ? 
+                    (file.size / 1024).toFixed(2) + ' KB' : 
+                    (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+                
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = ' (' + fileSize + ')';
+                document.getElementById('fileInfo').style.display = 'flex';
+                
+                // Set the file input for consistency
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                document.getElementById('fileInput').files = dataTransfer.files;
+                
+                // Hide any previous alerts
+                hideAlerts();
+            }
+        }
+        
+        // Clicking on upload area triggers file input
+        dropZone.addEventListener('click', function() {
+            document.getElementById('fileInput').click();
+        });
+        
+        // Process the uploaded file
+        function processFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files.length) {
+                showError('Please select a file first');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show loading state
+            const processBtn = document.querySelector('.btn-success');
+            const originalText = processBtn.innerHTML;
+            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            processBtn.disabled = true;
+            document.getElementById('loader').style.display = 'block';
+            hideAlerts();
+            
+            // Send to backend
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                currentData = data;
+                displayResults(data);
+                showSuccess('File processed successfully!');
+                showPage('results');
+            })
+            .catch(error => {
+                showError('Error: ' + error.message);
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                // Reset button
+                processBtn.innerHTML = '<i class="fas fa-play"></i> Process File';
+                processBtn.disabled = false;
+                document.getElementById('loader').style.display = 'none';
+            });
+        }
+        
+        // Display results from backend
+        function displayResults(data) {
+            // Update statistics
+            document.getElementById('totalTransactions').textContent = data.total_count;
+            document.getElementById('fraudTransactions').textContent = data.fraud_count;
+            document.getElementById('legitTransactions').textContent = data.total_count - data.fraud_count;
+            document.getElementById('fraudRate').textContent = 
+                ((data.fraud_count / data.total_count) * 100).toFixed(2) + '%';
+            
+            // Update results table
+            const tableBody = document.querySelector('#resultsTable tbody');
+            tableBody.innerHTML = '';
+            
+            if (data.data && data.data.length > 0) {
+                data.data.forEach(transaction => {
+                    const row = document.createElement('tr');
+                    if (transaction.predicted_fraud === 1) {
+                        row.classList.add('fraud-row');
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${transaction.step || 'N/A'}</td>
+                        <td>${transaction.type || 'N/A'}</td>
+                        <td>${transaction.amount ? '$' + parseFloat(transaction.amount).toLocaleString() : 'N/A'}</td>
+                        <td>${transaction.oldbalanceOrg ? '$' + parseFloat(transaction.oldbalanceOrg).toLocaleString() : 'N/A'}</td>
+                        <td>${transaction.newbalanceOrig ? '$' + parseFloat(transaction.newbalanceOrig).toLocaleString() : 'N/A'}</td>
+                        <td>${transaction.predicted_fraud === 1 ? 
+                            '<span style="color: #e74c3c;"><i class="fas fa-exclamation-circle"></i> Fraud</span>' : 
+                            '<span style="color: #27ae60;"><i class="fas fa-check-circle"></i> Legitimate</span>'}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // If there are more transactions, add a message
+                if (data.total_count > 50) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td colspan="6" style="text-align: center;">
+                            Showing 50 of ${data.total_count} transactions
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+                
+                // Update analytics data
+                updateAnalytics(data);
+            } else {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center;">No data available in the uploaded file.</td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Update analytics page with data
+        function updateAnalytics(data) {
+            if (!data.data) return;
+            
+            // Calculate highest fraud amount
+            let highestFraud = 0;
+            let commonType = {};
+            
+            data.data.forEach(t => {
+                if (t.predicted_fraud === 1) {
+                    // Check for highest fraud amount
+                    if (t.amount && parseFloat(t.amount) > highestFraud) {
+                        highestFraud = parseFloat(t.amount);
+                    }
+                    
+                    // Count fraud by type
+                    if (t.type) {
+                        commonType[t.type] = (commonType[t.type] || 0) + 1;
+                    }
+                }
+            });
+            
+            // Update highest fraud amount
+            document.getElementById('highestFraud').textContent = '$' + highestFraud.toLocaleString();
+            
+            // Find most common fraud type
+            let mostCommonType = 'N/A';
+            let maxCount = 0;
+            for (const type in commonType) {
+                if (commonType[type] > maxCount) {
+                    mostCommonType = type;
+                    maxCount = commonType[type];
+                }
+            }
+            document.getElementById('commonType').textContent = mostCommonType;
+            
+            // Render charts if we're on the analytics page
+            if (document.getElementById('analytics').classList.contains('active')) {
+                renderCharts();
+            }
+        }
+        
+        // Render analytics charts
+        function renderCharts() {
+            if (!currentData || !currentData.data) return;
+            
+            // Process data for charts
+            const fraudByType = {};
+            const fraudOverTime = {};
+            
+            currentData.data.forEach(t => {
+                if (t.predicted_fraud === 1) {
+                    // Count by type
+                    if (t.type) {
+                        fraudByType[t.type] = (fraudByType[t.type] || 0) + 1;
+                    }
+                    
+                    // Count by time (step)
+                    if (t.step) {
+                        fraudOverTime[t.step] = (fraudOverTime[t.step] || 0) + 1;
+                    }
+                }
+            });
+            
+            // Destroy existing charts if they exist
+            if (typeChart) {
+                typeChart.destroy();
+            }
+            if (timeChart) {
+                timeChart.destroy();
+            }
+            
+            // Create fraud by type chart
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            typeChart = new Chart(typeCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(fraudByType),
+                    datasets: [{
+                        data: Object.values(fraudByType),
+                        backgroundColor: [
+                            '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+                            '#1abc9c', '#d35400', '#c0392b', '#16a085', '#27ae60'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Fraud Distribution by Transaction Type'
+                        },
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+            
+            // Create fraud over time chart
+            const timeCtx = document.getElementById('timeChart').getContext('2d');
+            
+            // Sort time data
+            const sortedTimeKeys = Object.keys(fraudOverTime).sort((a, b) => a - b);
+            const sortedTimeValues = sortedTimeKeys.map(key => fraudOverTime[key]);
+            
+            timeChart = new Chart(timeCtx, {
+                type: 'line',
+                data: {
+                    labels: sortedTimeKeys,
+                    datasets: [{
+                        label: 'Fraudulent Transactions',
+                        data: sortedTimeValues,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Fraud Over Time'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time Step'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Fraudulent Transactions'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Download results
+        function downloadResults() {
+            if (!currentData) {
+                showError('No data available to download');
+                return;
+            }
+            
+            // Convert data to CSV
+            let csvContent = "Step,Type,Amount,Old Balance,New Balance,Status\n";
+            
+            currentData.data.forEach(t => {
+                const status = t.predicted_fraud === 1 ? "Fraud" : "Legitimate";
+                csvContent += `${t.step || ''},${t.type || ''},${t.amount || ''},${t.oldbalanceOrg || ''},${t.newbalanceOrig || ''},${status}\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const date = new Date().toISOString().slice(0, 10);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `fraud_detection_results_${date}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Show error message
+        function showError(message) {
+            const alert = document.getElementById('errorAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            const alert = document.getElementById('successAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Hide all alerts
+        function hideAlerts() {
+            document.getElementById('errorAlert').style.display = 'none';
+            document.getElementById('successAlert').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+1111111111111111111111111111111111111111111111111111111111111111111111111
+
+
+
+
+
+
+#from flask import Flask, render_template, request, jsonify, send_file
+#import pandas as pd
+#import joblib
+#from sklearn.preprocessing import LabelEncoder
+#import os
+#import numpy as np
+#  from pages import summary  # Import summary.py logic
+# from pages.summary import get_summary 
+#from flask_cors import CORS
+#import traceback
+#import numpy as np
+#from io import BytesIO
+#import json
+#from datetime import datetime
+
+#app = Flask(__name__, template_folder="templates", static_folder="static")
+
+#CORS(app)
+
+# Configuration
+#MODEL_PATH = "catboost_model.joblib"
+UPLOAD_FOLDER = "uploads"
+ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
+
+# These are the columns your model was originally trained with
+MODEL_REQUIRED_COLUMNS = ["step", "type", "amount", "nameOrig", "oldbalanceOrg", "newbalanceOrig", "nameDest", "newbalanceDest", "isFlaggedFraud"]
+
+# These are the columns we'll ask users to provide (minimum required)
+USER_REQUIRED_COLUMNS = ["step", "type", "amount", "oldbalanceOrg", "newbalanceOrig"]
+
+# Create upload directory if it doesn't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Check if model exists
+if not os.path.exists(MODEL_PATH):
+    print(f"Warning: Model file '{MODEL_PATH}' not found. Please ensure it's in the same directory as app.py")
+
+# ---------- Helper Functions ----------
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def validate_dataframe(df):
+    """Check if dataframe has required columns from user"""
+    missing_cols = [col for col in USER_REQUIRED_COLUMNS if col not in df.columns]
+    if missing_cols:
+        raise ValueError(f"Missing required columns: {missing_cols}")
+    
+    # Check for empty dataframe
+    if df.empty:
+        raise ValueError("Uploaded file is empty")
+    
+    # Check for non-numeric values in numeric columns
+    numeric_cols = ['amount', 'oldbalanceOrg', 'newbalanceOrig']
+    for col in numeric_cols:
+        if col in df.columns:
+            # Convert to numeric, coercing errors to NaN
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            # Check if there are too many NaN values
+            if df[col].isna().sum() > len(df) / 2:  # More than half are NaN
+                raise ValueError(f"Column '{col}' contains too many non-numeric values")
+    
+    return True
+
+def prepare_for_prediction(df):
+    """
+    Prepare the user's dataframe to match the model's expected input format.
+    This adds missing columns with default values that the model expects.
+    """
+    df_prepared = df.copy()
+    
+    # Add missing columns that the model expects
+    for col in MODEL_REQUIRED_COLUMNS:
+        if col not in df_prepared.columns:
+            if col == "nameOrig":
+                # Generate synthetic nameOrig values
+                df_prepared[col] = [f"C{1000000 + i}" for i in range(len(df_prepared))]
+            elif col == "nameDest":
+                # Generate synthetic nameDest values
+                df_prepared[col] = [f"C{2000000 + i}" for i in range(len(df_prepared))]
+            elif col == "newbalanceDest":
+                # Set default value for newbalanceDest
+                df_prepared[col] = 0.0
+            elif col == "isFlaggedFraud":
+                # Set default value for isFlaggedFraud
+                df_prepared[col] = 0
+            else:
+                # For other missing columns, fill with 0
+                df_prepared[col] = 0
+    
+    # Ensure the columns are in the exact order the model expects
+    df_prepared = df_prepared[MODEL_REQUIRED_COLUMNS]
+    
+    return df_prepared
+
+def normalize_iqr(df):
+    df_normalized = df.copy()
+    numeric_cols = df.select_dtypes(include=['number']).columns
+
+    for col in numeric_cols:
+        # Handle NaN values by filling with median
+        if df[col].isna().any():
+            median_val = df[col].median()
+            df_normalized[col] = df[col].fillna(median_val)
+            
+        median = df_normalized[col].median()
+        iqr = df_normalized[col].quantile(0.75) - df_normalized[col].quantile(0.25)
+        
+        # Avoid division by zero
+        if iqr != 0:
+            df_normalized[col] = (df_normalized[col] - median) / iqr
+        else:
+            df_normalized[col] = df_normalized[col] - median
+            
+    return df_normalized
+
+def encode_categoricals(df):
+    df_encoded = df.copy()
+    cat_cols = df.select_dtypes(exclude="number").columns
+    
+    for col in cat_cols:
+        le = LabelEncoder()
+        # Handle NaN values by filling with a placeholder
+        if df_encoded[col].isna().any():
+            df_encoded[col] = df_encoded[col].fillna("UNKNOWN")
+        df_encoded[col] = le.fit_transform(df_encoded[col].astype(str))
+    return df_encoded
+
+def predict_fraud(df, model_path=MODEL_PATH):
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file {model_path} not found")
+    
+    model = joblib.load(model_path)
+    # Get probability scores along with predictions
+    preds = model.predict(df)
+    probas = model.predict_proba(df)
+    
+    return preds, probas
+
+def cleanup_file(file_path):
+    """Remove temporary file after processing"""
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        print(f"Warning: Could not remove temporary file {file_path}: {str(e)}")
+
+def generate_analytics(df_result):
+    """Generate analytics data from results"""
+    analytics = {}
+    
+    # Basic stats
+    analytics['total_count'] = len(df_result)
+    analytics['fraud_count'] = int((df_result["predicted_fraud"] == 1).sum())
+    analytics['legit_count'] = analytics['total_count'] - analytics['fraud_count']
+    analytics['fraud_rate'] = round((analytics['fraud_count'] / analytics['total_count'] * 100), 2) if analytics['total_count'] > 0 else 0
+    
+    # Fraud by type
+    if 'type' in df_result.columns:
+        fraud_by_type = df_result[df_result['predicted_fraud'] == 1].groupby('type').size().to_dict()
+        analytics['fraud_by_type'] = fraud_by_type
+        
+        # Most common fraud type
+        if fraud_by_type:
+            analytics['most_common_fraud_type'] = max(fraud_by_type, key=fraud_by_type.get)
+        else:
+            analytics['most_common_fraud_type'] = "None"
+    
+    # Fraud over time (by step)
+    if 'step' in df_result.columns:
+        fraud_over_time = df_result[df_result['predicted_fraud'] == 1].groupby('step').size().to_dict()
+        analytics['fraud_over_time'] = fraud_over_time
+    
+    # Amount statistics
+    if 'amount' in df_result.columns:
+        fraud_amounts = df_result[df_result['predicted_fraud'] == 1]['amount']
+        if not fraud_amounts.empty:
+            analytics['max_fraud_amount'] = round(fraud_amounts.max(), 2)
+            analytics['avg_fraud_amount'] = round(fraud_amounts.mean(), 2)
+            analytics['min_fraud_amount'] = round(fraud_amounts.min(), 2)
+        else:
+            analytics['max_fraud_amount'] = 0
+            analytics['avg_fraud_amount'] = 0
+            analytics['min_fraud_amount'] = 0
+    
+    return analytics
+
+# ---------- Routes ----------
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    file_path = None
+    try:
+        # Check if file was uploaded
+        if "file" not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        file = request.files["file"]
+        
+        # Check if filename is empty
+        if file.filename == "":
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Check file extension
+        if not allowed_file(file.filename):
+            return jsonify({"error": f"Unsupported file type. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+
+        # Save to temporary uploads folder
+        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(file_path)
+
+        # Read file based on extension
+        if file.filename.endswith(".csv"):
+            df_original = pd.read_csv(file_path)
+        elif file.filename.endswith(".xlsx"):
+            df_original = pd.read_excel(file_path)
+        
+        # Validate the dataframe
+        validate_dataframe(df_original)
+        
+        # Prepare data for the model (add missing columns)
+        df_for_model = prepare_for_prediction(df_original)
+        
+        # Process data
+        df_normalized = normalize_iqr(df_for_model)
+        df_encoded = encode_categoricals(df_normalized)
+        
+        # Make predictions
+        preds, probas = predict_fraud(df_encoded)
+
+        # Prepare results - only show user-provided columns plus predictions
+        df_result = df_original.copy()
+        df_result["predicted_fraud"] = preds
+        df_result["fraud_probability"] = [round(prob[1] * 100, 2) for prob in probas]  # Probability of fraud class
+
+        # Generate analytics
+        analytics = generate_analytics(df_result)
+
+        # Prepare JSON for frontend - only show user-relevant columns
+        expected_cols = USER_REQUIRED_COLUMNS + ["predicted_fraud", "fraud_probability"]
+        available_cols = [c for c in expected_cols if c in df_result.columns]
+
+        # Convert to list of dictionaries for JSON response
+        data = df_result[available_cols].head(100).replace({np.nan: None}).to_dict(orient="records")
+
+        return jsonify({
+            "success": True,
+            "data": data,
+            "analytics": analytics,
+            "message": f"Processed {analytics['total_count']} transactions. Found {analytics['fraud_count']} potential fraud cases ({analytics['fraud_rate']}%)."
+        })
+        
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except pd.errors.EmptyDataError:
+        return jsonify({"error": "The uploaded file is empty"}), 400
+    except pd.errors.ParserError:
+        return jsonify({"error": "Error parsing the file. Please check the file format."}), 400
+    except Exception as e:
+        # Log the full error for debugging
+        app.logger.error(f"Error processing file: {str(e)}")
+        app.logger.error(traceback.format_exc())
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+    finally:
+        # Clean up temporary file
+        if file_path:
+            cleanup_file(file_path)
+
+@app.route("/download", methods=["POST"])
+def download():
+    try:
+        data = request.get_json()
+        if not data or 'results' not in data:
+            return jsonify({"error": "No data provided for download"}), 400
+        
+        # Create DataFrame from provided data
+        df = pd.DataFrame(data['results'])
+        
+        # Create in-memory file
+        output = BytesIO()
+        
+        # Create filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"fraud_detection_results_{timestamp}.xlsx"
+        
+        # Save to Excel
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Results', index=False)
+            
+            # Add summary sheet
+            summary_data = {
+                'Metric': ['Total Transactions', 'Fraudulent Transactions', 'Legitimate Transactions', 'Fraud Rate'],
+                'Value': [
+                    data.get('total_count', 0),
+                    data.get('fraud_count', 0),
+                    data.get('total_count', 0) - data.get('fraud_count', 0),
+                    f"{data.get('fraud_rate', 0)}%"
+                ]
+            }
+            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Summary', index=False)
+        
+        output.seek(0)
+        
+        return send_file(
+            output,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error generating download: {str(e)}")
+        return jsonify({"error": f"Error generating download: {str(e)}"}), 500
+
+@app.route("/health")
+def health_check():
+    """Health check endpoint"""
+    model_exists = os.path.exists(MODEL_PATH)
+    return jsonify({
+        "status": "healthy",
+        "model_loaded": model_exists,
+        "model_path": MODEL_PATH
+    })
+
+@app.route("/model/features")
+def model_features():
+    """Endpoint to check what features the model expects"""
+    try:
+        if not os.path.exists(MODEL_PATH):
+            return jsonify({"error": "Model file not found"}), 404
+            
+        model = joblib.load(MODEL_PATH)
+        # Try to get feature names from the model
+        try:
+            features = model.feature_names_
+            return jsonify({
+                "features": list(features),
+                "feature_count": len(features)
+            })
+        except:
+            return jsonify({
+                "message": "Could not extract feature names from model",
+                "expected_features": MODEL_REQUIRED_COLUMNS
+            })
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# @app.route("/summary")
+# def summary_page():
+#     return render_template("summary.html")
+
+# @app.route("/get_summary", methods=["GET"])
+# def summary_api():
+#     return get_summary()
+
+if __name__ == "__main__":
+    # Check if model exists before starting
+    if not os.path.exists(MODEL_PATH):
+        print(f"Warning: Model file '{MODEL_PATH}' not found. The application will start but prediction functionality will fail.")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+
+
+#     # ----------  Rule-Based Checks ----------
+# def check_org(df):
+#     inconsistencies = []
+#     if "nameOrig" in df.columns:
+#         grouped = df.groupby("nameOrig")
+#         for name, group in grouped:
+#             if "oldbalanceOrg" in group.columns and "newbalanceOrig" in group.columns:
+#                 balance_diff = group["newbalanceOrig"] - group["oldbalanceOrg"]
+#                 if (balance_diff > 0).any():
+#                     inconsistencies.append({
+#                         "nameOrig": name,
+#                         "issue": "Balance increased after transaction",
+#                         "rows": group.index[balance_diff > 0].tolist()
+#                     })
+#     return inconsistencies
+
+# def check_dest(df):
+#     inconsistencies = []
+#     if "nameDest" in df.columns:
+#         grouped = df.groupby("nameDest")
+#         for name, group in grouped:
+#             if "oldbalanceDest" in group.columns and "newbalanceDest" in group.columns:
+#                 balance_diff = group["newbalanceDest"] - group["oldbalanceDest"]
+#                 if (balance_diff < 0).any():
+#                     inconsistencies.append({
+#                         "nameDest": name,
+#                         "issue": "Balance decreased after transaction (unexpected for destination)",
+#                         "rows": group.index[balance_diff < 0].tolist()
+#                     })
+#     return inconsistencies
+
+# def substractAmount(df):
+#     if "amount" in df.columns and "oldbalanceOrg" in df.columns and "newbalanceOrig" in df.columns:
+#         df["oldbalanceOrg"] -= df["amount"]
+#         df["newbalanceOrig"] -= df["amount"]
+#     return df
+
+# def substractAmountDest(df):
+#     if "amount" in df.columns and "oldbalanceDest" in df.columns and "newbalanceDest" in df.columns:
+#         df["oldbalanceDest"] -= df["amount"]
+#         df["newbalanceDest"] -= df["amount"]
+#     return df
+
+# def check_negative_balances(df):
+#     """Flag negative balances for origin or destination"""
+#     issues = []
+#     if "newbalanceOrig" in df.columns:
+#         negative_orig = df[df["newbalanceOrig"] < 0]
+#         for idx, row in negative_orig.iterrows():
+#             issues.append({
+#                 "account": row["nameOrig"],
+#                 "issue": "Origin balance negative",
+#                 "row": idx
+#             })
+#     if "newbalanceDest" in df.columns:
+#         negative_dest = df[df["newbalanceDest"] < 0]
+#         for idx, row in negative_dest.iterrows():
+#             issues.append({
+#                 "account": row["nameDest"],
+#                 "issue": "Destination balance negative",
+#                 "row": idx
+#             })
+#     return issues
+
+# def check_large_transactions(df, threshold=10000):
+#     """Flag transactions above a given threshold"""
+#     issues = []
+#     if "amount" in df.columns:
+#         large_tx = df[df["amount"] > threshold]
+#         for idx, row in large_tx.iterrows():
+#             issues.append({
+#                 "account": row["nameOrig"],
+#                 "issue": f"Transaction exceeds threshold {threshold}",
+#                 "row": idx
+#             })
+#     return issues
+
+# def check_self_transfers(df):
+#     """Flag transactions where sender and recipient are the same"""
+#     issues = []
+#     if "nameOrig" in df.columns and "nameDest" in df.columns:
+#         self_tx = df[df["nameOrig"] == df["nameDest"]]
+#         for idx, row in self_tx.iterrows():
+#             issues.append({
+#                 "account": row["nameOrig"],
+#                 "issue": "Self-transfer detected",
+#                 "row": idx
+#             })
+#     return issues
+
+# def check_zero_or_negative_amount(df):
+#     """Flag transactions with zero or negative amounts"""
+#     issues = []
+#     if "amount" in df.columns:
+#         invalid_tx = df[df["amount"] <= 0]
+#         for idx, row in invalid_tx.iterrows():
+#             issues.append({
+#                 "account": row["nameOrig"],
+#                 "issue": "Zero or negative transaction amount",
+#                 "row": idx
+#             })
+#     return issues
+
+# def check_high_frequency(df, window=3):
+#     """
+#     Flag accounts that make multiple transactions within a short window (velocity check)
+#     window: number of consecutive steps to check
+#     """
+#     issues = []
+#     if "nameOrig" in df.columns and "step" in df.columns:
+#         grouped = df.groupby("nameOrig")
+#         for name, group in grouped:
+#             steps_sorted = group.sort_values("step")["step"].tolist()
+#             for i in range(len(steps_sorted) - window + 1):
+#                 if steps_sorted[i + window - 1] - steps_sorted[i] < window:
+#                     indices = group.iloc[i:i+window].index.tolist()
+#                     issues.append({
+#                         "account": name,
+#                         "issue": f"High frequency of {window} transactions in short steps",
+#                         "rows": indices
+#                     })
+#                     break
+#     return issues
+
+# def Rule_Based_detect_fraud(df):
+#     # Initialize the fraud column
+#     df["is_fraud"] = 0
+
+#     # ---------- Helper function to increment fraud count ----------
+#     def mark_rows(rows):
+#         df.loc[rows, "is_fraud"] += 1
+
+#     # ---------- Apply Existing & New Rules ----------
+#     # 1. Origin balance inconsistency
+#     org_issues = check_org(df)
+#     for issue in org_issues:
+#         mark_rows(issue["rows"])
+
+#     # 2. Destination balance inconsistency
+#     dest_issues = check_dest(df)
+#     for issue in dest_issues:
+#         mark_rows(issue["rows"])
+
+#     # 3. Negative balances
+#     neg_bal_issues = check_negative_balances(df)
+#     for issue in neg_bal_issues:
+#         mark_rows([issue["row"]])
+
+#     # 4. Large transactions
+#     large_tx_issues = check_large_transactions(df)
+#     for issue in large_tx_issues:
+#         mark_rows([issue["row"]])
+
+#     # 5. Self-transfers
+#     self_tx_issues = check_self_transfers(df)
+#     for issue in self_tx_issues:
+#         mark_rows([issue["row"]])
+
+#     # 6. Zero or negative amounts
+#     zero_neg_amount_issues = check_zero_or_negative_amount(df)
+#     for issue in zero_neg_amount_issues:
+#         mark_rows([issue["row"]])
+
+#     # 7. High frequency / velocity checks
+#     high_freq_issues = check_high_frequency(df)
+#     for issue in high_freq_issues:
+#         mark_rows(issue["rows"])
+
+#     return df
+
+
+
+111111111111111111111111111111111111111111111111111111111111
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f9f2c5fe;
+  color: #695714;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* الصفحات */
+.page {
+  display: none;
+  height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+.active {
+  display: block;
+}
+
+/* الصفحة الأولى */
+#page1 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+/* العناوين */
+h1 {
+  font-size: 40px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #695714;
+}
+
+/* تحسين مربع التحميل */
+.upload-box {
+  margin: 40px 0;
+  padding: 30px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+input[type="file"] {
+  padding: 10px;
+  border: 2px dashed #c5bc73;
+  background: #f9f9f9;
+  width: 300px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+button {
+  padding: 12px 30px;
+  background: #c5bc73;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 16px;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #a89c4f;
+}
+
+button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
+/* الصفحة الثانية والثالثة */
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 250px;
+  background: #f5f5f5;
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.sidebar button {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 12px;
+  border-radius: 5px;
+  border: none;
+  background: #e8e8e8;
+  color: #333;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.sidebar button:hover, .sidebar button.active {
+  background: #c5bc73;
+  color: white;
+}
+
+/* المحتوى */
+.content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background: white;
+}
+
+/* الجدول */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* رسائل الخطأ */
+.error {
+  color: red;
+  margin-top: 10px;
+}
