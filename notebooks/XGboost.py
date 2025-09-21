@@ -1,57 +1,106 @@
 import pandas as pd
-import xgboost as xgb
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
-import joblib
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+from sklearn.utils import class_weight
+from imblearn.over_sampling import SMOTE
+import xgboost as xgb
+import matplotlib.pyplot as plt
+import seaborn as sns
+from joblib import dump, load
+import os
 
-# 1️⃣ قراءة البيانات
-df = pd.read_csv("cleanData100.csv")
+# -----------------------------
+# تحميل البيانات
+file_path = "Transactions Data.csv"
+if not os.path.exists(file_path):
+    raise FileNotFoundError("⚠️ الملف غير موجود، تأكد من المسار")
+df = pd.read_csv(file_path)
 
-# 2️⃣ اختيار الـ features والـ target
-X = df.drop(["isFraud", "nameOrig", "nameDest"], axis=1)  # العمود type سيبقى
-y = df["isFraud"]
+# -----------------------------
+# Feature Engineering
+df['diffOrig'] = df['oldbalanceOrg'] - df['newbalanceOrig']
+df['diffDest'] = df['oldbalanceDest'] - df['newbalanceDest']
+df['amount_ratio'] = df['amount'] / (df['oldbalanceOrg'] + 1e-6)
 
-# 3️⃣ تحويل العمود 'type' إلى category
-X["type"] = X["type"].astype("category")
+# تحويل العمود type إلى أرقام
+le_type = LabelEncoder()
+df['type'] = le_type.fit_transform(df['type'])
 
-# 4️⃣ تقسيم البيانات
+# -----------------------------
+# تجهيز البيانات
+X = df.drop(['nameOrig', 'nameDest', 'isFraud'], axis=1)
+y = df['isFraud']
+
+# -----------------------------
+# Train-Test Split
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# 5️⃣ تحويل البيانات إلى DMatrix مع enable_categorical=True
-dtrain = xgb.DMatrix(X_train, label=y_train, enable_categorical=True)
-dtest = xgb.DMatrix(X_test, label=y_test, enable_categorical=True)
+# -----------------------------
+# Scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-# 6️⃣ إعداد الباراميترات
-params = {
-    "objective": "binary:logistic",
-    "eval_metric": "auc",
-    "scale_pos_weight": len(y_train[y_train==0]) / len(y_train[y_train==1]),
-    "max_depth": 6,
-    "eta": 0.1,
-    "subsample": 0.8,
-    "colsample_bytree": 0.8
-}
+# -----------------------------
+# التعامل مع عدم التوازن بواسطة SMOTE
+print("قبل SMOTE:", np.bincount(y_train))
+sm = SMOTE(random_state=42)
+X_train_res, y_train_res = sm.fit_resample(X_train, y_train)
+print("بعد SMOTE:", np.bincount(y_train_res))
 
-# 7️⃣ تدريب النموذج
-model = xgb.train(
-    params,
-    dtrain,
-    num_boost_round=300,
-    evals=[(dtrain, "train"), (dtest, "test")],
-    early_stopping_rounds=20,
-    verbose_eval=50
+# -----------------------------
+# تدريب XGBoost
+model = xgb.XGBClassifier(
+    n_estimators=500,
+    max_depth=6,
+    learning_rate=0.1,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    use_label_encoder=False,
+    eval_metric='logloss',
+    random_state=42
 )
 
-# 8️⃣ التنبؤ
-y_pred_prob = model.predict(dtest)
-y_pred = [1 if p > 0.5 else 0 for p in y_pred_prob]
+model.fit(X_train_res, y_train_res)
 
-# 9️⃣ التقييم
+# -----------------------------
+# التنبؤ
+y_probs = model.predict_proba(X_test)[:,1]
+
+# تحديد Threshold ديناميكي حسب ROC curve
+from sklearn.metrics import roc_curve
+
+fpr, tpr, thresholds = roc_curve(y_test, y_probs)
+optimal_idx = np.argmax(tpr - fpr)
+optimal_threshold = thresholds[optimal_idx]
+print(f"🔎 Optimal Threshold: {optimal_threshold}")
+
+y_pred = (y_probs >= optimal_threshold).astype(int)
+
+# -----------------------------
+# النتائج
+print("\n📊 Classification Report:")
 print(classification_report(y_test, y_pred))
-print(confusion_matrix(y_test, y_pred))
 
-# 🔹 حفظ النموذج
-joblib.dump(model, "xgboost_fraud_model.pkl")
-print("✅ النموذج تم حفظه في xgboost_fraud_model.pkl")
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(6,4))
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+            xticklabels=["Not Fraud", "Fraud"],
+            yticklabels=["Not Fraud", "Fraud"])
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix - XGBoost")
+plt.show()
+
+# -----------------------------
+# حفظ النموذج والـ Scaler والـ LabelEncoder والThreshold
+dump(model, "xgboost_fraud_model.pkl")
+dump(scaler, "scaler.pkl")
+dump(le_type, "labelencoder_type.pkl")
+np.save("best_threshold.npy", optimal_threshold)
+
+print("✅ Model, Scaler, LabelEncoder, and Threshold saved successfully!")

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FraudGuard - Data Summary</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='summary.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo"><i class="fas fa-shield-alt"></i> FraudGuard</div>
+            <div class="tagline">Data Summary</div>
+        </header>
+
+        <div class="main-content">
+            <div id="dropZoneSummary" class="upload-area">
+                <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <h3>Drag & Drop Your File Here</h3>
+                <p>or <label for="fileInputSummary" class="btn">Select File</label></p>
+                <input type="file" id="fileInputSummary" accept=".csv,.xlsx" style="display:none;">
+            </div>
+
+            <div class="file-info" id="fileInfoSummary" style="display:none;">
+                <div>
+                    <span id="fileNameSummary">No file selected</span>
+                    <span id="fileSizeSummary"></span>
+                </div>
+                <button class="btn btn-success" onclick="processSummaryFile()">
+                    <i class="fas fa-play"></i> Generate Summary
+                </button>
+            </div>
+
+            <div class="alert alert-error" id="errorAlertSummary"></div>
+            <div class="alert alert-success" id="successAlertSummary"></div>
+
+            <div class="stats-container" id="summaryStats" style="display:none;"></div>
+
+            <div class="chart-container" id="summaryChartContainer" style="display:none;">
+                <canvas id="summaryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='summary.js') }}"></script>
+</body>
+</html>
