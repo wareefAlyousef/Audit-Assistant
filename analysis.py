@@ -20,7 +20,7 @@ import seaborn as sns
 # -----------------------------
 # 1️⃣ Load Excel dataset
 # -----------------------------
-file_path = r"C:\Users\lenovo\OneDrive\المستندات\GitHub\Audit-Assistant\notebooks\fraud_dataset_30pct.xlsx"
+file_path = r"C:\Users\lenovo\OneDrive\المستندات\GitHub\Audit-Assistant\notebooks\dataset.xlsx"
 if not os.path.exists(file_path):
     raise FileNotFoundError(f"File not found: {file_path}")
 
