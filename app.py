@@ -6,6 +6,9 @@ import numpy as np
 from io import BytesIO
 from datetime import datetime
 from catboost import CatBoostClassifier
+import gspread
+from google.oauth2.service_account import Credentials
+
 
 app = Flask(__name__)
 
@@ -14,6 +17,15 @@ MODEL_PATH = "catboost_fraud_model.cbm"
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+creds = Credentials.from_service_account_file("anomalous-detect-9ab3bbadb4d4.json", scopes=SCOPES)
+client = gspread.authorize(creds)
+
+# افتح الشيت باستخدام ID من الرابط
+SHEET_ID = "1rKCl2FrJSbQ6Ojcp4RJVb_Y5miGe7DivoQpkvGWvmZo"
+sheet = client.open_by_key(SHEET_ID).sheet1
+
 
 # الأعمدة المطلوبة من المستخدم
 USER_REQUIRED_COLUMNS = ["step", "type", "amount", "oldbalanceOrg", "newbalanceOrig"]
@@ -110,6 +122,27 @@ def generate_analytics(df_result):
         analytics['min_fraud_amount'] = round(fraud_amounts.min(),2) if not fraud_amounts.empty else 0
     return analytics
 
+def write_fraud_to_sheet(df):
+    # نحصر فقط الأعمدة المطلوبة
+    required_cols = [
+        "step", "type", "amount", "nameOrig", "oldbalanceOrg", "newbalanceOrig",
+        "nameDest", "oldbalanceDest", "newbalanceDest", "predicted_fraud"
+    ]
+    fraud_df = df[required_cols]
+
+    if fraud_df.empty:
+        print("لا توجد بيانات")
+        return
+
+    # تحويل الداتا إلى ليست (للرفع)
+    data = [fraud_df.columns.values.tolist()] + fraud_df.values.tolist()
+
+    # مسح المحتوى السابق
+    sheet.clear()
+
+    # رفع البيانات
+    sheet.update("A1", data)
+
 # ---------------- Routes ----------------
 @app.route("/")
 def index():
@@ -139,6 +172,7 @@ def upload():
         df_result = df_original.copy()
         df_result["predicted_fraud"] = preds
         df_result["fraud_probability"] = [round(p[1]*100,2) for p in probas]
+        write_fraud_to_sheet(df_result)
         analytics = generate_analytics(df_result)
         expected_cols = USER_REQUIRED_COLUMNS + ["predicted_fraud","fraud_probability"]
         available_cols = [c for c in expected_cols if c in df_result.columns]
