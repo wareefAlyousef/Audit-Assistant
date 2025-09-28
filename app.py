@@ -1,23 +1,30 @@
+<<<<<<< HEAD
+from flask import Flask, request, jsonify, send_file
+import pandas as pd
+import numpy as np
+import os
+=======
 from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
 import os
 import traceback
 import numpy as np
+>>>>>>> 585ec3ea849ea0c16a877b3cd94e1d40001176de
 from io import BytesIO
 from datetime import datetime
+import joblib  # لحفظ وتحميل XGBoost أو أي scikit-learn
 from catboost import CatBoostClassifier
 import gspread
 from google.oauth2.service_account import Credentials
 
 
 app = Flask(__name__)
-
-# ---------------- Configuration ----------------
-MODEL_PATH = "catboost_fraud_model.cbm"
 UPLOAD_FOLDER = "uploads"
-ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+<<<<<<< HEAD
+# ---------------- Helpers ----------------
+=======
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_file("anomalous-detect-9ab3bbadb4d4.json", scopes=SCOPES)
 client = gspread.authorize(creds)
@@ -35,69 +42,49 @@ MODEL_FEATURE_ORDER = ["step", "type", "amount",  "oldbalanceOrg",
                        "newbalanceOrig",  "oldbalanceDest", "newbalanceDest"]
 
 # ---------------- Helper Functions ----------------
+>>>>>>> 585ec3ea849ea0c16a877b3cd94e1d40001176de
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in ['csv','xlsx','pkl','cbm']
 
-def detect_delimiter(file_path):
-    with open(file_path, 'r', encoding='utf-8-sig') as f:
-        first_line = f.readline()
-    delimiters = [',',';','\t','|']
-    delimiter_count = {d:first_line.count(d) for d in delimiters}
-    return max(delimiter_count, key=delimiter_count.get)
+def read_file(file_path):
+    if file_path.endswith('.csv'):
+        return pd.read_csv(file_path)
+    elif file_path.endswith('.xlsx'):
+        return pd.read_excel(file_path)
+    else:
+        raise ValueError("Unsupported file type")
 
-def read_csv_with_auto_detect(file_path):
-    delimiter = detect_delimiter(file_path)
-    encodings = ['utf-8-sig','utf-8','latin-1','iso-8859-1','windows-1252']
-    for enc in encodings:
-        try:
-            df = pd.read_csv(file_path, delimiter=delimiter, encoding=enc)
-            if not df.empty:
-                return df
-        except: 
-            continue
-    return pd.read_csv(file_path, delimiter=delimiter)
+def prepare_dataframe(df, required_cols, feature_order):
+    # إضافة أعمدة مفقودة
+    for col in feature_order:
+        if col not in df.columns:
+            df[col] = 0.0
+    df = df[feature_order]
+    return df
 
-def validate_dataframe(df):
-    df.columns = df.columns.str.strip().str.replace('\ufeff','')
-    missing_cols = [col for col in USER_REQUIRED_COLUMNS if col not in df.columns]
-    if missing_cols:
-        raise ValueError(f"Missing required columns: {missing_cols}")
-    if df.empty:
-        raise ValueError("Uploaded file is empty")
-    # تحويل الأعمدة الرقمية
-    numeric_cols = ['amount','oldbalanceOrg','newbalanceOrig']
-    for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-    return True
+def load_model(model_path):
+    ext = model_path.split('.')[-1]
+    if ext == 'pkl':
+        return joblib.load(model_path)
+    elif ext == 'cbm':
+        model = CatBoostClassifier()
+        model.load_model(model_path)
+        return model
+    else:
+        raise ValueError("Unsupported model type")
 
-def prepare_for_prediction(df):
-    df_prepared = df.copy()
-    for col in MODEL_FEATURE_ORDER:
-        if col not in df_prepared.columns:
-            if col in ["nameOrig"]:
-                df_prepared[col] = [f"C{1000000+i}" for i in range(len(df_prepared))]
-            elif col in ["nameDest"]:
-                df_prepared[col] = [f"C{2000000+i}" for i in range(len(df_prepared))]
-            else:
-                df_prepared[col] = 0.0
-    df_prepared = df_prepared[MODEL_FEATURE_ORDER]
-    return df_prepared
-
-def encode_categoricals(df):
-    df_encoded = df.copy()
-    for col in ["type"]:
-        df_encoded[col] = df_encoded[col].astype(str)
-    return df_encoded
-
-def predict_fraud(df, model_path=MODEL_PATH):
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model file {model_path} not found")
-    model = CatBoostClassifier()
-    model.load_model(model_path)
-    preds = model.predict(df)
-    probas = model.predict_proba(df)
+def predict(df, model):
+    ext = type(model).__name__
+    if 'CatBoost' in ext:
+        preds = model.predict(df)
+        probas = model.predict_proba(df)[:,1]
+    else:
+        preds = model.predict(df)
+        probas = model.predict_proba(df)[:,1]
     return preds, probas
 
+<<<<<<< HEAD
+=======
 def cleanup_file(file_path):
     if os.path.exists(file_path):
         os.remove(file_path)
@@ -143,27 +130,51 @@ def write_fraud_to_sheet(df):
     # رفع البيانات
     sheet.update("A1", data)
 
+>>>>>>> 585ec3ea849ea0c16a877b3cd94e1d40001176de
 # ---------------- Routes ----------------
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/upload", methods=["POST"])
-def upload():
-    file_path = None
+@app.route("/predict", methods=["POST"])
+def predict_route():
     try:
-        if "file" not in request.files:
-            return jsonify({"error":"No file uploaded"}), 400
-        file = request.files["file"]
-        if file.filename == "":
-            return jsonify({"error":"No file selected"}), 400
-        if not allowed_file(file.filename):
-            return jsonify({"error":f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
-        file_path = os.path.join(UPLOAD_FOLDER,file.filename)
-        file.save(file_path)
-        if file.filename.endswith(".csv"):
-            df_original = read_csv_with_auto_detect(file_path)
+        # رفع الملفات
+        if 'model' not in request.files or 'data' not in request.files:
+            return jsonify({"error":"Model and data files required"}),400
+
+        model_file = request.files['model']
+        data_file = request.files['data']
+
+        model_path = os.path.join(UPLOAD_FOLDER, model_file.filename)
+        data_path = os.path.join(UPLOAD_FOLDER, data_file.filename)
+        model_file.save(model_path)
+        data_file.save(data_path)
+
+        # قراءة البيانات
+        df = read_file(data_path)
+
+        # تحميل النموذج
+        model = load_model(model_path)
+
+        # ترتيب الأعمدة حسب النموذج (مفترض تحفظ feature_order أثناء التدريب)
+        if hasattr(model, 'feature_names_'):
+            feature_order = model.feature_names_
         else:
+<<<<<<< HEAD
+            # لازم المستخدم يرسل feature_order إذا مش موجود
+            feature_order = df.columns.tolist()
+        df_prepared = prepare_dataframe(df, df.columns.tolist(), feature_order)
+
+        # التنبؤ
+        preds, probas = predict(df_prepared, model)
+        df['predicted'] = preds
+        df['probability'] = probas
+
+        # تحليلات
+        analytics = {
+            'total': len(df),
+            'fraud': int((df['predicted']==1).sum()),
+            'legit': int((df['predicted']==0).sum())
+        }
+
+=======
             df_original = pd.read_excel(file_path)
         validate_dataframe(df_original)
         df_for_model = prepare_for_prediction(df_original)
@@ -177,73 +188,17 @@ def upload():
         expected_cols = USER_REQUIRED_COLUMNS + ["predicted_fraud","fraud_probability"]
         available_cols = [c for c in expected_cols if c in df_result.columns]
         data = df_result[available_cols].head(100).replace({np.nan: None}).to_dict(orient="records")
+>>>>>>> 585ec3ea849ea0c16a877b3cd94e1d40001176de
         return jsonify({
             "success": True,
-            "data": data,
             "analytics": analytics,
-            "message": f"Processed {analytics['total_count']} transactions. Found {analytics['fraud_count']} potential fraud cases ({analytics['fraud_rate']}%)."
+            "results": df.head(100).to_dict(orient='records')
         })
-    except Exception as e:
-        app.logger.error(traceback.format_exc())
-        return jsonify({"error":str(e)}), 500
     finally:
-        if file_path:
-            cleanup_file(file_path)
+        # تنظيف الملفات
+        for f in [model_path,data_path]:
+            if os.path.exists(f):
+                os.remove(f)
 
-@app.route("/download", methods=["POST"])
-def download():
-    try:
-        data = request.get_json()
-        if not data or 'results' not in data:
-            return jsonify({"error":"No data provided"}), 400
-        df = pd.DataFrame(data['results'])
-        output = BytesIO()
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"fraud_detection_results_{timestamp}.xlsx"
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name='Results', index=False)
-            summary_data = {
-                'Metric': ['Total Transactions','Fraudulent Transactions','Legitimate Transactions','Fraud Rate'],
-                'Value': [
-                    data.get('total_count',0),
-                    data.get('fraud_count',0),
-                    data.get('total_count',0)-data.get('fraud_count',0),
-                    f"{data.get('fraud_rate',0)}%"
-                ]
-            }
-            pd.DataFrame(summary_data).to_excel(writer,sheet_name='Summary',index=False)
-        output.seek(0)
-        return send_file(output, as_attachment=True, download_name=filename,
-                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    except Exception as e:
-        app.logger.error(traceback.format_exc())
-        return jsonify({"error":str(e)}), 500
-
-@app.route("/health")
-def health_check():
-    return jsonify({
-        "status":"healthy",
-        "model_loaded": os.path.exists(MODEL_PATH),
-        "model_path": MODEL_PATH
-    })
-
-@app.route("/model/features")
-def model_features():
-    if not os.path.exists(MODEL_PATH):
-        return jsonify({"error":"Model file not found"}), 404
-    try:
-        model = CatBoostClassifier()
-        model.load_model(MODEL_PATH)
-        return jsonify({
-            "features": MODEL_FEATURE_ORDER,
-            "feature_count": len(MODEL_FEATURE_ORDER),
-            "feature_order": "Exact order expected by the model"
-        })
-    except Exception as e:
-        return jsonify({"error":str(e)}), 500
-
-# ---------------- Run App ----------------
-if __name__ == "__main__":
-    if not os.path.exists(MODEL_PATH):
-        print(f"Warning: Model file '{MODEL_PATH}' not found. Prediction will fail.")
+if __name__=="__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)

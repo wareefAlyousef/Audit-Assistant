@@ -5,14 +5,26 @@ from tensorflow.keras.layers import Dense, Dropout
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 import os
-from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
-file_path = "notebooks\Transactions Data.csv"
 
+# المسار
+file_path = "notebooks\\Transactions Data.csv"  # تأكد من المسار
+
+# تحقق من وجود الملف قبل أي عملية
 if os.path.exists(file_path):
     df = pd.read_csv(file_path)
     print("File loaded successfully!")
+
+    # عرض أسماء الأعمدة وأول 5 صفوف
+    print("\nColumns:", df.columns)
+    print(df.head())
+
+    # توزيع العمود الهدف
+    plt.figure(figsize=(6,4))
+    sns.countplot(x="isFraud", data=df)
+    plt.title("Distribution of isFraud")
+    plt.show()
 
     # افترض أن العمود الهدف اسمه isFraud
     X = df.drop("isFraud", axis=1)
@@ -48,23 +60,35 @@ if os.path.exists(file_path):
     loss, acc = model.evaluate(X_test, y_test)
     print(f"Test Accuracy: {acc:.2f}")
 
+    # --- Visualization of Training ---
+    plt.figure(figsize=(12,5))
+
+    # Loss
+    plt.subplot(1,2,1)
+    plt.plot(history.history['loss'], label='Train Loss')
+    plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.title("Model Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+
+    # Accuracy
+    plt.subplot(1,2,2)
+    plt.plot(history.history['accuracy'], label='Train Accuracy')
+    plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+    plt.title("Model Accuracy")
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy")
+    plt.legend()
+
+    plt.show()
+
+    # Correlation Heatmap
+    plt.figure(figsize=(10,8))
+    sns.heatmap(df.corr(), annot=True, fmt=".2f", cmap="coolwarm")
+    plt.title("Correlation Matrix")
+    plt.show()
+
 else:
     print("File not found:", file_path)
-y_pred = (model.predict(X_test) > 0.5).astype("int32")
 
-# مصفوفة الالتباس
-cm = confusion_matrix(y_test, y_pred)
-
-# تقرير الأداء
-print("\nClassification Report:\n")
-print(classification_report(y_test, y_pred, target_names=["Non-Fraud", "Fraud"]))
-
-# رسم Heatmap
-plt.figure(figsize=(6,4))
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-            xticklabels=["Non-Fraud", "Fraud"],
-            yticklabels=["Non-Fraud", "Fraud"])
-plt.xlabel("Predicted")
-plt.ylabel("Actual")
-plt.title("Confusion Matrix")
-plt.show()
