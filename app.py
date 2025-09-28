@@ -1,15 +1,8 @@
-<<<<<<< HEAD
-from flask import Flask, request, jsonify, send_file
-import pandas as pd
-import numpy as np
-import os
-=======
 from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
 import os
 import traceback
 import numpy as np
->>>>>>> 585ec3ea849ea0c16a877b3cd94e1d40001176de
 from io import BytesIO
 from datetime import datetime
 import joblib  # لحفظ وتحميل XGBoost أو أي scikit-learn
@@ -22,9 +15,6 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-<<<<<<< HEAD
-# ---------------- Helpers ----------------
-=======
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_file("anomalous-detect-9ab3bbadb4d4.json", scopes=SCOPES)
 client = gspread.authorize(creds)
@@ -42,7 +32,6 @@ MODEL_FEATURE_ORDER = ["step", "type", "amount",  "oldbalanceOrg",
                        "newbalanceOrig",  "oldbalanceDest", "newbalanceDest"]
 
 # ---------------- Helper Functions ----------------
->>>>>>> 585ec3ea849ea0c16a877b3cd94e1d40001176de
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ['csv','xlsx','pkl','cbm']
 
@@ -83,8 +72,6 @@ def predict(df, model):
         probas = model.predict_proba(df)[:,1]
     return preds, probas
 
-<<<<<<< HEAD
-=======
 def cleanup_file(file_path):
     if os.path.exists(file_path):
         os.remove(file_path)
@@ -130,7 +117,6 @@ def write_fraud_to_sheet(df):
     # رفع البيانات
     sheet.update("A1", data)
 
->>>>>>> 585ec3ea849ea0c16a877b3cd94e1d40001176de
 # ---------------- Routes ----------------
 @app.route("/predict", methods=["POST"])
 def predict_route():
@@ -157,24 +143,6 @@ def predict_route():
         if hasattr(model, 'feature_names_'):
             feature_order = model.feature_names_
         else:
-<<<<<<< HEAD
-            # لازم المستخدم يرسل feature_order إذا مش موجود
-            feature_order = df.columns.tolist()
-        df_prepared = prepare_dataframe(df, df.columns.tolist(), feature_order)
-
-        # التنبؤ
-        preds, probas = predict(df_prepared, model)
-        df['predicted'] = preds
-        df['probability'] = probas
-
-        # تحليلات
-        analytics = {
-            'total': len(df),
-            'fraud': int((df['predicted']==1).sum()),
-            'legit': int((df['predicted']==0).sum())
-        }
-
-=======
             df_original = pd.read_excel(file_path)
         validate_dataframe(df_original)
         df_for_model = prepare_for_prediction(df_original)
@@ -188,7 +156,6 @@ def predict_route():
         expected_cols = USER_REQUIRED_COLUMNS + ["predicted_fraud","fraud_probability"]
         available_cols = [c for c in expected_cols if c in df_result.columns]
         data = df_result[available_cols].head(100).replace({np.nan: None}).to_dict(orient="records")
->>>>>>> 585ec3ea849ea0c16a877b3cd94e1d40001176de
         return jsonify({
             "success": True,
             "analytics": analytics,
